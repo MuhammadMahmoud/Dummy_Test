@@ -22,23 +22,24 @@ class BuildRunner:
     
     def build_project(self, makefile: str = "makefile.mk") -> bool:
         """
-        Build the project using makefile
+        Build the project using build.bat script (DRY principle)
+        Uses existing Build/build.bat instead of duplicating make logic
         
         Args:
-            makefile: Name of makefile
+            makefile: Name of makefile (parameter for future flexibility)
         
         Returns:
             True if build successful, False otherwise
         """
-        makefile_path = self.build_dir / makefile
+        build_script = self.build_dir / "build.bat"
         
-        if not makefile_path.exists():
-            raise FileNotFoundError(f"Makefile not found: {makefile_path}")
+        if not build_script.exists():
+            raise FileNotFoundError(f"Build script not found: {build_script}")
         
         try:
-            # Build using make
+            # Call existing build.bat script instead of duplicating logic
             result = subprocess.run(
-                ["make", "-f", str(makefile_path)],
+                ["cmd", "/c", str(build_script)],
                 cwd=str(self.build_dir),
                 capture_output=True,
                 text=True,
@@ -53,7 +54,7 @@ class BuildRunner:
                 print(f"Build failed: {result.stderr}")
                 return False
             
-            print("Build successful")
+            print("✓ Build successful (via build.bat)")
             return True
         
         except subprocess.TimeoutExpired:
@@ -66,50 +67,45 @@ class BuildRunner:
     def run_executable(self, exe_name: str = "mini_bank.exe", 
                       capture_output: bool = True) -> bool:
         """
-        Run the compiled executable
+        Run the compiled executable using run.bat script (DRY principle)
+        Uses existing Build/run.bat instead of duplicating run logic
         
         Args:
-            exe_name: Name of executable
+            exe_name: Name of executable (parameter for future flexibility)
             capture_output: Whether to capture output to file
         
         Returns:
             True if execution successful, False otherwise
         """
-        exe_path = self.build_dir / exe_name
+        run_script = self.build_dir / "run.bat"
         
-        if not exe_path.exists():
-            raise FileNotFoundError(f"Executable not found: {exe_path}")
+        if not run_script.exists():
+            raise FileNotFoundError(f"Run script not found: {run_script}")
         
         try:
             if capture_output:
-                # Run and capture to file
-                output = subprocess.run(
-                    [str(exe_path)],
+                # Run and capture output to file
+                result = subprocess.run(
+                    ["cmd", "/c", f"{str(run_script)} > {str(self.output_file)} 2>&1"],
                     cwd=str(self.build_dir),
                     capture_output=True,
                     text=True,
                     timeout=10
                 )
-                
-                # Save to output.txt
-                with open(self.output_file, "w") as f:
-                    f.write(output.stdout)
-                    if output.stderr:
-                        f.write("\n--- STDERR ---\n")
-                        f.write(output.stderr)
             else:
                 # Run without capturing (shows in console)
-                output = subprocess.run(
-                    [str(exe_path)],
+                result = subprocess.run(
+                    ["cmd", "/c", str(run_script)],
                     cwd=str(self.build_dir),
                     timeout=10
                 )
             
-            self.last_exit_code = output.returncode
-            self.last_stdout = output.stdout if capture_output else ""
-            self.last_stderr = output.stderr if capture_output else ""
+            self.last_exit_code = result.returncode
+            self.last_stdout = result.stdout if capture_output else ""
+            self.last_stderr = result.stderr if capture_output else ""
             
-            return output.returncode == 0
+            print("✓ Execution complete (via run.bat)")
+            return result.returncode == 0
         
         except subprocess.TimeoutExpired:
             print("Execution timed out")

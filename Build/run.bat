@@ -17,4 +17,3 @@ if exist mini_bank.exe (
 )
 
 echo.
-pause
